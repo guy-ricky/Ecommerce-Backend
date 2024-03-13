@@ -19,14 +19,10 @@ const productSchema = new mongoose.Schema(
           required: true,
         },
         price: {
-          type: Number,
-          required: true,
-        },
-        category: {
           type: String,
           required: true,
         },
-        brand: {
+        category: {
           type: String,
           required: true,
         },
@@ -41,8 +37,6 @@ const productSchema = new mongoose.Schema(
           select: false,
         },
         images: [],
-        color: [],
-        tags: String,
         ratings: [
           {
             star: Number,
