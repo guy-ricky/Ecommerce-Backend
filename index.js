@@ -17,7 +17,7 @@ const morgan = require('morgan')
 dbConnect();
 
 
-
+app.use(express.json());
 app.use(morgan('dev'));
 app.use(cors())
 app.use(bodyParser.json());

@@ -1,21 +1,22 @@
+const express = require("express");
 const Product = require("../models/productModel");
 const User = require('../models/userModel')
 const asyncHandler = require("express-async-handler");
 const slugify = require("slugify");
 const validateMongoId = require('../utils/validateMongo')
 
-
 const createProduct = asyncHandler(async (req, res) => {
   try {
-    if (req.body.title) {
-      req.body.slug = slugify(req.body.title);
-    }
-    const newProduct = await Product.create(req.body);
-    res.json(newProduct);
+      if (req.body.title) {
+        req.body.slug = slugify(req.body.title)
+      }
+      const newProduct = await Product.create(req.body);
+      res.json(newProduct)
   } catch (error) {
-    throw new Error(error);
+    throw new Error(error)
   }
-});
+
+})
 
   const updateProduct = asyncHandler(async (req, res) => {
     const {id} = req.params;
@@ -131,27 +132,40 @@ const createProduct = asyncHandler(async (req, res) => {
   });
 
   const rating = asyncHandler(async (req, res) => {
-    const { _id } = req.user;
-    const { star, prodId, comment } = req.body;
     try {
+      const { _id } = req.user;
+      const { star, prodId, comment } = req.body;
+  
       const product = await Product.findById(prodId);
-      let alreadyRated = product.ratings.find(
+      const alreadyRated = product.ratings.find(
         (userId) => userId.postedby.toString() === _id.toString()
       );
+  
       if (alreadyRated) {
-        const updateRating = await Product.updateOne(
+        // Update existing rating
+        const updatedProduct = await Product.updateOne(
           {
             ratings: { $elemMatch: alreadyRated },
           },
           {
             $set: { "ratings.$.star": star, "ratings.$.comment": comment },
           },
-          {
-            new: true,
-          }
+          { new: true }
         );
+  
+        // Calculate and update total rating
+        const getallratings = await Product.findById(prodId);
+        const totalRating = getallratings.ratings.length;
+        const ratingsum = getallratings.ratings
+          .map((item) => item.star)
+          .reduce((prev, curr) => prev + curr, 0);
+        const actualRating = Math.round(ratingsum / totalRating);
+        await Product.findByIdAndUpdate(prodId, { totalrating: actualRating });
+  
+        res.json(updatedProduct);
       } else {
-        const rateProduct = await Product.findByIdAndUpdate(
+        // Create new rating
+        const updatedProduct = await Product.findByIdAndUpdate(
           prodId,
           {
             $push: {
@@ -162,30 +176,24 @@ const createProduct = asyncHandler(async (req, res) => {
               },
             },
           },
-          {
-            new: true,
-          }
+          { new: true }
         );
+  
+        // Calculate and update total rating
+        const getallratings = await Product.findById(prodId);
+        const totalRating = getallratings.ratings.length;
+        const ratingsum = getallratings.ratings
+          .map((item) => item.star)
+          .reduce((prev, curr) => prev + curr, 0);
+        const actualRating = Math.round(ratingsum / totalRating);
+        await Product.findByIdAndUpdate(prodId, { totalrating: actualRating });
+  
+        res.json(updatedProduct);
       }
-      const getallratings = await Product.findById(prodId);
-      let totalRating = getallratings.ratings.length;
-      let ratingsum = getallratings.ratings
-        .map((item) => item.star)
-        .reduce((prev, curr) => prev + curr, 0);
-      let actualRating = Math.round(ratingsum / totalRating);
-      let finalproduct = await Product.findByIdAndUpdate(
-        prodId,
-        {
-          totalrating: actualRating,
-        },
-        { new: true }
-      );
-      res.json(finalproduct);
     } catch (error) {
-      throw new Error(error);
+      console.error(error);
+      res.status(500).json({ message: "Error updating rating" });
     }
   });
-
   
-
-module.exports = {  createProduct, updateProduct, getaProduct, getallproducts, deleteProduct, addToWishlist, rating};
+  module.exports = {  createProduct, updateProduct,getaProduct, getallproducts, deleteProduct, addToWishlist, rating};
